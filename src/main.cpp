@@ -142,8 +142,8 @@ void setup() {
   epd_init();
 
   Rect_t area = {
-      .x = 230,
-      .y = 0,
+      .x = 20,
+      .y = 20,
       .width = logo_width,
       .height = logo_height,
   };
@@ -204,10 +204,6 @@ void setup() {
   FontProperties props = {
       .fg_color = 15, .bg_color = 0, .fallback_glyph = 0, .flags = 0};
 
-  // Button A, B, C, D drawings removed per user request
-
-  epd_draw_grayscale_image(epd_full_screen(), framebuffer);
-
   epd_poweroff();
 }
 
@@ -257,10 +253,32 @@ void loop() {
       if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
         Serial.printf("➸ Calendar fetched successfully: %d events\n",
                       cal_data.count);
+
+        // Clear Calendar Area
+        Rect_t cal_area = {
+            .x = 50,
+            .y = 220,
+            .width = EPD_WIDTH - 100,
+            .height = EPD_HEIGHT - 220 - 60,
+        };
+        epd_clear_area(cal_area);
+
+        int cal_x = 50;
+        int cal_y = 260;
+
         for (int i = 0; i < cal_data.count; i++) {
           Serial.printf("   Event %d: %s | %s %s\n", i,
                         cal_data.events[i].title, cal_data.events[i].date,
                         cal_data.events[i].time);
+
+          String event_string = String(cal_data.events[i].date) + " " +
+                                String(cal_data.events[i].time) + "  |  " +
+                                String(cal_data.events[i].title);
+          writeln((GFXfont *)&FiraSans, (char *)event_string.c_str(), &cal_x,
+                  &cal_y, NULL);
+          // Move to next line for the next event
+          cal_x = 50;
+          cal_y += 60;
         }
       } else {
         Serial.println("➸ Failed to fetch calendar data!");
