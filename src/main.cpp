@@ -36,7 +36,7 @@
 #include <Wire.h>
 #include <esp_sntp.h>
 
-#define WIFI_SSID "Arbeitszimmer"
+#define WIFI_SSID "TP-Link_IoT_2G"
 #define WIFI_PASSWORD "Holger&star1103"
 #define PCF8563_SLAVE_ADDRESS 0x51
 
@@ -44,8 +44,9 @@ const char *ntpServer1 = "pool.ntp.org";
 const char *ntpServer2 = "time.nist.gov";
 const long gmtOffset_sec = 3600;
 const int daylightOffset_sec = 3600;
-const char *time_zone = "CST-8"; // TimeZone rule for Europe/Rome including
-                                 // daylight adjustment rules (optional)
+const char *time_zone =
+    "CET-1CEST,M3.5.0,M10.5.0/3"; // TimeZone rule for Europe/Berlin including
+                                  // daylight adjustment rules (optional)
 
 SensorPCF8563 rtc;
 TouchDrvGT911 touch;
