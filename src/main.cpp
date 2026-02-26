@@ -68,8 +68,7 @@ struct _point {
 } touchPoint[] = {{0, 10, 10, 80, 80},
                   {1, EPD_WIDTH - 80, 10, 80, 80},
                   {2, 10, EPD_HEIGHT - 80, 80, 80},
-                  {3, EPD_WIDTH - 80, EPD_HEIGHT - 80, 80, 80},
-                  {4, EPD_WIDTH / 2 - 60, EPD_HEIGHT - 80, 120, 80}};
+                  {3, EPD_WIDTH - 80, EPD_HEIGHT - 80, 80, 80}};
 
 void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
   Serial.println("WiFi connected");
@@ -230,13 +229,6 @@ void setup() {
   write_mode((GFXfont *)&FiraSans, "D", &x, &y, framebuffer, WHITE_ON_BLACK,
              &props);
 
-  x = EPD_WIDTH / 2 - 55;
-  y = EPD_HEIGHT - 30;
-  epd_draw_rect(EPD_WIDTH / 2 - 60, EPD_HEIGHT - 80, 120, 75, 0x0000,
-                framebuffer);
-  write_mode((GFXfont *)&FiraSans, "Sleep", &x, &y, framebuffer, WHITE_ON_BLACK,
-             NULL);
-
   epd_draw_grayscale_image(epd_full_screen(), framebuffer);
 
   epd_poweroff();
@@ -257,21 +249,36 @@ void loop() {
     }
     String voltage = "➸ Voltage: " + String(battery_voltage) + "V";
 
-    Rect_t area = {
+    // Draw Date and Time
+    Rect_t time_area = {
         .x = 200,
         .y = 310,
         .width = 500,
-        .height = 100,
+        .height = 60,
     };
+    epd_clear_area(time_area);
 
     int cursor_x = 200;
     int cursor_y = 350;
-    epd_clear_area(area);
 
+    struct tm timeinfo;
+    rtc.getDateTime(&timeinfo);
+    strftime(buf, 64, "➸ %b %d %Y %H:%M:%S", &timeinfo);
+    writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
+
+    // Draw Voltage
+    Rect_t voltage_area = {
+        .x = 200,
+        .y = EPD_HEIGHT - 80,
+        .width = 500,
+        .height = 80,
+    };
+    epd_clear_area(voltage_area);
+
+    cursor_x = 200;
+    cursor_y = EPD_HEIGHT - 40;
     writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
             NULL);
-    cursor_x = 200;
-    cursor_y += 50;
 
     // Fetch Calendar every hour
     if (millis() > calendar_interval) {
@@ -293,13 +300,7 @@ void loop() {
     // Format the output using the strftime function
     // For more formats, please refer to :
     // https://man7.org/linux/man-pages/man3/strftime.3.html
-
-    struct tm timeinfo;
-    // Get the time C library structure
-    rtc.getDateTime(&timeinfo);
-
-    strftime(buf, 64, "➸ %b %d %Y %H:%M:%S", &timeinfo);
-    writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
+    // Time rendering was moved above so it draws before the calendar query.
 
     /**
      * There are two ways to close
