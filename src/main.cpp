@@ -160,20 +160,16 @@ void setup() {
   pinMode(TOUCH_INT, OUTPUT);
   digitalWrite(TOUCH_INT, HIGH);
 
-  writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
-  cursor_x = 200;
-  cursor_y += 50;
+  Serial.println(buf);
 
   Wire.begin(BOARD_SDA, BOARD_SCL);
   Wire.beginTransmission(PCF8563_SLAVE_ADDRESS);
   if (Wire.endTransmission() == 0) {
     rtc.begin(Wire, BOARD_SDA, BOARD_SCL);
     // rtc.setDateTime(2022, 6, 30, 0, 0, 0);
-    writeln((GFXfont *)&FiraSans, "➸ RTC is online  😀 \n", &cursor_x,
-            &cursor_y, NULL);
+    Serial.println("➸ RTC is online  😀");
   } else {
-    writeln((GFXfont *)&FiraSans, "➸ RTC is probe failed!  😂 \n", &cursor_x,
-            &cursor_y, NULL);
+    Serial.println("➸ RTC is probe failed!  😂");
   }
 
   /*
@@ -191,20 +187,15 @@ void setup() {
     touchAddress = 0x5D;
   }
 
-  cursor_x = 200;
-  cursor_y += 50;
-
   touch.setPins(-1, TOUCH_INT);
   if (touch.begin(Wire, touchAddress, BOARD_SDA, BOARD_SCL)) {
     touch.setMaxCoordinates(EPD_WIDTH, EPD_HEIGHT);
     touch.setSwapXY(true);
     touch.setMirrorXY(false, true);
     touchOnline = true;
-    writeln((GFXfont *)&FiraSans, "➸ Touch is online  😀 \n", &cursor_x,
-            &cursor_y, NULL);
+    Serial.println("➸ Touch is online  😀");
   } else {
-    writeln((GFXfont *)&FiraSans, "➸ Touch is probe failed!  😂 \n", &cursor_x,
-            &cursor_y, NULL);
+    Serial.println("➸ Touch is probe failed!  😂");
   }
 
 #endif
@@ -315,39 +306,24 @@ void loop() {
     uint8_t touched = touch.getPoint(&x, &y);
     if (touched) {
 
-      // When reading the battery voltage, POWER_EN must be turned on
-      epd_poweron();
-
-      int cursor_x = 200;
-      int cursor_y = 450;
-
-      Rect_t area = {
-          .x = 200,
-          .y = 410,
-          .width = 400,
-          .height = 50,
-      };
-      epd_clear_area(area);
-
-      snprintf(buf, 128, "➸ X:%d Y:%d", x, y);
-
       bool pressButton = false;
       for (int i = 0; i < sizeof(touchPoint) / sizeof(touchPoint[0]); ++i) {
         if ((x > touchPoint[i].x && x < (touchPoint[i].x + touchPoint[i].w)) &&
             (y > touchPoint[i].y && y < (touchPoint[i].y + touchPoint[i].h))) {
-          snprintf(buf, 128, "➸ Pressed Button: %c\n",
-                   65 + touchPoint[i].buttonID);
-          writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
+          Serial.printf("➸ Pressed Button: %c\n", 65 + touchPoint[i].buttonID);
           pressButton = true;
 
           if (touchPoint[i].buttonID == 4) {
+
+            // Bring up power only if going to sleep (to render 'Sleep')
+            epd_poweron();
 
             Serial.println("Sleep !!!!!!");
 
             epd_clear();
 
-            cursor_x = EPD_WIDTH / 2 - 40;
-            cursor_y = EPD_HEIGHT / 2 - 40;
+            int cursor_x = EPD_WIDTH / 2 - 40;
+            int cursor_y = EPD_HEIGHT / 2 - 40;
 
             memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
@@ -378,7 +354,7 @@ void loop() {
         }
       }
       if (!pressButton) {
-        writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
+        Serial.printf("➸ X:%d Y:%d\n", x, y);
       }
 
       /**
