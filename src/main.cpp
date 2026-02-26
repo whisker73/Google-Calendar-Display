@@ -252,7 +252,7 @@ void setup() {
 void loop() {
 
   if (millis() > interval) {
-    interval = millis() + 10000;
+    interval = millis() + 60000;
 
     // When reading the battery voltage, POWER_EN must be turned on
     epd_poweron();
