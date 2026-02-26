@@ -268,15 +268,15 @@ void loop() {
 
     // Draw Voltage
     Rect_t voltage_area = {
-        .x = 200,
-        .y = EPD_HEIGHT - 80,
-        .width = 500,
-        .height = 80,
+        .x = EPD_WIDTH / 2 - 80,
+        .y = EPD_HEIGHT - 60,
+        .width = 160,
+        .height = 60,
     };
     epd_clear_area(voltage_area);
 
-    cursor_x = 200;
-    cursor_y = EPD_HEIGHT - 40;
+    cursor_x = EPD_WIDTH / 2 - 80;
+    cursor_y = EPD_HEIGHT - 20;
     writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
             NULL);
 
