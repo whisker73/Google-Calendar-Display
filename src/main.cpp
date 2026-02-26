@@ -29,6 +29,7 @@
 #include <SD.h>
 #include <SPI.h>
 
+#include "calendar_client.h"
 #include "utilities.h"
 #include <SensorPCF8563.hpp>
 #include <TouchDrvGT911.hpp>
@@ -270,6 +271,19 @@ void loop() {
             NULL);
     cursor_x = 200;
     cursor_y += 50;
+
+    // Fetch Calendar
+    calendar_data_t cal_data;
+    if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
+      Serial.printf("➸ Calendar fetched successfully: %d events\n",
+                    cal_data.count);
+      for (int i = 0; i < cal_data.count; i++) {
+        Serial.printf("   Event %d: %s | %s %s\n", i, cal_data.events[i].title,
+                      cal_data.events[i].date, cal_data.events[i].time);
+      }
+    } else {
+      Serial.println("➸ Failed to fetch calendar data!");
+    }
 
     // Format the output using the strftime function
     // For more formats, please refer to :
