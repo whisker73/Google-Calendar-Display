@@ -55,6 +55,7 @@ TouchDrvGT911 touch;
 uint8_t *framebuffer = NULL;
 bool touchOnline = false;
 uint32_t interval = 0;
+uint32_t calendar_interval = 0;
 int vref = 1100;
 char buf[128];
 
@@ -272,17 +273,21 @@ void loop() {
     cursor_x = 200;
     cursor_y += 50;
 
-    // Fetch Calendar
-    calendar_data_t cal_data;
-    if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
-      Serial.printf("➸ Calendar fetched successfully: %d events\n",
-                    cal_data.count);
-      for (int i = 0; i < cal_data.count; i++) {
-        Serial.printf("   Event %d: %s | %s %s\n", i, cal_data.events[i].title,
-                      cal_data.events[i].date, cal_data.events[i].time);
+    // Fetch Calendar every hour
+    if (millis() > calendar_interval) {
+      calendar_interval = millis() + 3600000;
+      calendar_data_t cal_data;
+      if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
+        Serial.printf("➸ Calendar fetched successfully: %d events\n",
+                      cal_data.count);
+        for (int i = 0; i < cal_data.count; i++) {
+          Serial.printf("   Event %d: %s | %s %s\n", i,
+                        cal_data.events[i].title, cal_data.events[i].date,
+                        cal_data.events[i].time);
+        }
+      } else {
+        Serial.println("➸ Failed to fetch calendar data!");
       }
-    } else {
-      Serial.println("➸ Failed to fetch calendar data!");
     }
 
     // Format the output using the strftime function
