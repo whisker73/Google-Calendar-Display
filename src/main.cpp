@@ -143,7 +143,7 @@ void setup() {
 
   Rect_t area = {
       .x = 20,
-      .y = 20,
+      .y = 0,
       .width = logo_width,
       .height = logo_height,
   };
