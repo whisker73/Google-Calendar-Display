@@ -204,30 +204,7 @@ void setup() {
   FontProperties props = {
       .fg_color = 15, .bg_color = 0, .fallback_glyph = 0, .flags = 0};
 
-  // Draw button
-  int32_t x = 18;
-  int32_t y = 50;
-  epd_fill_rect(10, 10, 80, 80, 0x0000, framebuffer);
-  write_mode((GFXfont *)&FiraSans, "A", &x, &y, framebuffer, WHITE_ON_BLACK,
-             &props);
-
-  x = EPD_WIDTH - 72;
-  y = 50;
-  epd_fill_rect(EPD_WIDTH - 80, 10, 80, 80, 0x0000, framebuffer);
-  write_mode((GFXfont *)&FiraSans, "B", &x, &y, framebuffer, WHITE_ON_BLACK,
-             &props);
-
-  x = 18;
-  y = EPD_HEIGHT - 30;
-  epd_fill_rect(10, EPD_HEIGHT - 80, 80, 80, 0x0000, framebuffer);
-  write_mode((GFXfont *)&FiraSans, "C", &x, &y, framebuffer, WHITE_ON_BLACK,
-             &props);
-
-  x = EPD_WIDTH - 72;
-  y = EPD_HEIGHT - 30;
-  epd_fill_rect(EPD_WIDTH - 80, EPD_HEIGHT - 80, 80, 80, 0x0000, framebuffer);
-  write_mode((GFXfont *)&FiraSans, "D", &x, &y, framebuffer, WHITE_ON_BLACK,
-             &props);
+  // Button A, B, C, D drawings removed per user request
 
   epd_draw_grayscale_image(epd_full_screen(), framebuffer);
 
@@ -249,33 +226,26 @@ void loop() {
     }
     String voltage = "➸ Voltage: " + String(battery_voltage) + "V";
 
-    // Draw Date and Time
-    Rect_t time_area = {
-        .x = 200,
-        .y = 310,
-        .width = 500,
+    // Set up a unified bottom strip for Status (Time and Voltage)
+    Rect_t status_area = {
+        .x = 0,
+        .y = EPD_HEIGHT - 60,
+        .width = EPD_WIDTH,
         .height = 60,
     };
-    epd_clear_area(time_area);
+    epd_clear_area(status_area);
 
-    int cursor_x = 200;
-    int cursor_y = 350;
+    // Left side: Date and Time
+    int cursor_x = 50;
+    int cursor_y = EPD_HEIGHT - 20;
 
     struct tm timeinfo;
     rtc.getDateTime(&timeinfo);
-    strftime(buf, 64, "➸ %b %d %Y %H:%M:%S", &timeinfo);
+    strftime(buf, 64, "%b %d %Y %H:%M:%S", &timeinfo);
     writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
 
-    // Draw Voltage
-    Rect_t voltage_area = {
-        .x = EPD_WIDTH / 2 - 80,
-        .y = EPD_HEIGHT - 60,
-        .width = 160,
-        .height = 60,
-    };
-    epd_clear_area(voltage_area);
-
-    cursor_x = EPD_WIDTH / 2 - 80;
+    // Right side: Voltage
+    cursor_x = EPD_WIDTH - 300;
     cursor_y = EPD_HEIGHT - 20;
     writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
             NULL);
