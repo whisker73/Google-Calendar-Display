@@ -208,177 +208,96 @@ void setup() {
 }
 
 void loop() {
-
-  if (millis() > interval) {
-    interval = millis() + 60000;
-
-    // When reading the battery voltage, POWER_EN must be turned on
-    epd_poweron();
-    delay(10); // Make adc measurement more accurate
-    uint16_t v = analogRead(BATT_PIN);
-    float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
-    if (battery_voltage >= 4.2) {
-      battery_voltage = 4.2;
-    }
-    String voltage = "➸ Voltage: " + String(battery_voltage) + "V";
-
-    // Set up a unified bottom strip for Status (Time and Voltage)
-    Rect_t status_area = {
-        .x = 0,
-        .y = EPD_HEIGHT - 60,
-        .width = EPD_WIDTH,
-        .height = 60,
-    };
-    epd_clear_area(status_area);
-
-    // Left side: Date and Time
-    int cursor_x = 50;
-    int cursor_y = EPD_HEIGHT - 20;
-
-    struct tm timeinfo;
-    rtc.getDateTime(&timeinfo);
-    strftime(buf, 64, "%b %d %Y %H:%M:%S", &timeinfo);
-    writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
-
-    // Right side: Voltage
-    cursor_x = EPD_WIDTH - 330;
-    cursor_y = EPD_HEIGHT - 20;
-    writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
-            NULL);
-
-    // Fetch Calendar every hour
-    if (millis() > calendar_interval) {
-      calendar_interval = millis() + 3600000;
-      calendar_data_t cal_data;
-      if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
-        Serial.printf("➸ Calendar fetched successfully: %d events\n",
-                      cal_data.count);
-
-        // Clear Calendar Area
-        Rect_t cal_area = {
-            .x = 50,
-            .y = 220,
-            .width = EPD_WIDTH - 100,
-            .height = EPD_HEIGHT - 220 - 60,
-        };
-        epd_clear_area(cal_area);
-
-        int cal_x = 50;
-        int cal_y = 260;
-
-        for (int i = 0; i < cal_data.count; i++) {
-          Serial.printf("   Event %d: %s | %s %s\n", i,
-                        cal_data.events[i].title, cal_data.events[i].date,
-                        cal_data.events[i].time);
-
-          String event_string = String(cal_data.events[i].date) + " " +
-                                String(cal_data.events[i].time) + "  |  " +
-                                String(cal_data.events[i].title);
-          writeln((GFXfont *)&FiraSans, (char *)event_string.c_str(), &cal_x,
-                  &cal_y, NULL);
-          // Move to next line for the next event
-          cal_x = 50;
-          cal_y += 60;
-        }
-      } else {
-        Serial.println("➸ Failed to fetch calendar data!");
-      }
-    }
-
-    // Format the output using the strftime function
-    // For more formats, please refer to :
-    // https://man7.org/linux/man-pages/man3/strftime.3.html
-    // Time rendering was moved above so it draws before the calendar query.
-
-    /**
-     * There are two ways to close
-     * It will turn off the power of the ink screen,
-     * but cannot turn off the blue LED light.
-     */
-    // epd_poweroff();
-
-    /**
-     * It will turn off the power of the entire
-     * POWER_EN control and also turn off the blue LED light
-     */
-    epd_poweroff_all();
+  // When reading the battery voltage, POWER_EN must be turned on
+  epd_poweron();
+  delay(10); // Make adc measurement more accurate
+  uint16_t v = analogRead(BATT_PIN);
+  float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
+  if (battery_voltage >= 4.2) {
+    battery_voltage = 4.2;
   }
+  String voltage = "➸ Voltage: " + String(battery_voltage) + "V";
+
+  // Set up a unified bottom strip for Status (Time and Voltage)
+  Rect_t status_area = {
+      .x = 0,
+      .y = EPD_HEIGHT - 60,
+      .width = EPD_WIDTH,
+      .height = 60,
+  };
+  epd_clear_area(status_area);
+
+  // Left side: Date and Time
+  int cursor_x = 50;
+  int cursor_y = EPD_HEIGHT - 20;
+
+  struct tm timeinfo;
+  rtc.getDateTime(&timeinfo);
+  strftime(buf, 64, "%b %d %Y %H:%M:%S", &timeinfo);
+  writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
+
+  // Right side: Voltage
+  cursor_x = EPD_WIDTH - 330;
+  cursor_y = EPD_HEIGHT - 20;
+  writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
+          NULL);
+
+  // Fetch Calendar
+  calendar_data_t cal_data;
+  if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
+    Serial.printf("➸ Calendar fetched successfully: %d events\n",
+                  cal_data.count);
+
+    // Clear Calendar Area
+    Rect_t cal_area = {
+        .x = 50,
+        .y = 220,
+        .width = EPD_WIDTH - 100,
+        .height = EPD_HEIGHT - 220 - 60,
+    };
+    epd_clear_area(cal_area);
+
+    int cal_x = 50;
+    int cal_y = 260;
+
+    for (int i = 0; i < cal_data.count; i++) {
+      Serial.printf("   Event %d: %s | %s %s\n", i, cal_data.events[i].title,
+                    cal_data.events[i].date, cal_data.events[i].time);
+
+      String event_string = String(cal_data.events[i].date) + " " +
+                            String(cal_data.events[i].time) + "  |  " +
+                            String(cal_data.events[i].title);
+      writeln((GFXfont *)&FiraSans, (char *)event_string.c_str(), &cal_x,
+              &cal_y, NULL);
+      // Move to next line for the next event
+      cal_x = 50;
+      cal_y += 60;
+    }
+  } else {
+    Serial.println("➸ Failed to fetch calendar data!");
+  }
+
+  // Finished updating display, turn off EPD and prepare for deep sleep
+  epd_poweroff_all();
+
+  Serial.println("Display updated. Entering deep sleep for 1 hour...");
+
+  WiFi.disconnect(true);
 
   if (touchOnline) {
-    int16_t x, y;
-
-    if (!digitalRead(TOUCH_INT)) {
-      return;
-    }
-
-    uint8_t touched = touch.getPoint(&x, &y);
-    if (touched) {
-
-      bool pressButton = false;
-      for (int i = 0; i < sizeof(touchPoint) / sizeof(touchPoint[0]); ++i) {
-        if ((x > touchPoint[i].x && x < (touchPoint[i].x + touchPoint[i].w)) &&
-            (y > touchPoint[i].y && y < (touchPoint[i].y + touchPoint[i].h))) {
-          Serial.printf("➸ Pressed Button: %c\n", 65 + touchPoint[i].buttonID);
-          pressButton = true;
-
-          if (touchPoint[i].buttonID == 4) {
-
-            // Bring up power only if going to sleep (to render 'Sleep')
-            epd_poweron();
-
-            Serial.println("Sleep !!!!!!");
-
-            epd_clear();
-
-            int cursor_x = EPD_WIDTH / 2 - 40;
-            int cursor_y = EPD_HEIGHT / 2 - 40;
-
-            memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
-
-            writeln((GFXfont *)&FiraSans, "Sleep", &cursor_x, &cursor_y,
-                    framebuffer);
-
-            epd_draw_grayscale_image(epd_full_screen(), framebuffer);
-
-            delay(1000);
-
-            epd_poweroff_all();
-
-            WiFi.disconnect(true);
-
-            touch.sleep();
-
-            delay(100);
-
-            Wire.end();
-
-            Serial.end();
-
-            // BOOT(STR_IO0) Button wakeup
-            esp_sleep_enable_ext1_wakeup(_BV(0), ESP_EXT1_WAKEUP_ANY_LOW);
-
-            esp_deep_sleep_start();
-          }
-        }
-      }
-      if (!pressButton) {
-        Serial.printf("➸ X:%d Y:%d\n", x, y);
-      }
-
-      /**
-       * There are two ways to close
-       * It will turn off the power of the ink screen,
-       * but cannot turn off the blue LED light.
-       */
-      // epd_poweroff();
-
-      /**
-       * It will turn off the power of the entire
-       * POWER_EN control and also turn off the blue LED light
-       */
-      epd_poweroff_all();
-    }
+    touch.sleep();
   }
 
-  delay(2);
+  delay(100);
+
+  Wire.end();
+  Serial.end();
+
+  // Configure timer wakeup for 1 hour (3600 seconds)
+  esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL);
+
+  // Configure BOOT(STR_IO0) Button wakeup
+  esp_sleep_enable_ext1_wakeup(_BV(0), ESP_EXT1_WAKEUP_ANY_LOW);
+
+  esp_deep_sleep_start();
 }
