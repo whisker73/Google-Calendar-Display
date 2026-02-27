@@ -241,7 +241,7 @@ void loop() {
     writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
 
     // Right side: Voltage
-    cursor_x = EPD_WIDTH - 300;
+    cursor_x = EPD_WIDTH - 330;
     cursor_y = EPD_HEIGHT - 20;
     writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
             NULL);
