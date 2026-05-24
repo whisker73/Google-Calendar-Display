@@ -3,15 +3,14 @@ function doGet(e) {
     var end = new Date();
     end.setDate(now.getDate() + 7);
 
-    // Collect events from all calendars, store calendar name alongside each event
     var calendars = CalendarApp.getAllCalendars();
     var allEvents = [];
 
     for (var c = 0; c < calendars.length; c++) {
-        var calName = calendars[c].getName();
+        var calEmail = calendars[c].getId();
         var events = calendars[c].getEvents(now, end);
         for (var i = 0; i < events.length; i++) {
-            allEvents.push({ event: events[i], calName: calName });
+            allEvents.push({ event: events[i], calEmail: calEmail });
         }
     }
 
@@ -25,7 +24,7 @@ function doGet(e) {
 
     for (var i = 0; i < limit; i++) {
         var evt = allEvents[i].event;
-        var calName = allEvents[i].calName;
+        var calEmail = allEvents[i].calEmail;
         var dateObj = evt.getStartTime();
         var timeStr = "";
 
@@ -44,7 +43,7 @@ function doGet(e) {
             title: evt.getTitle(),
             time: timeStr,
             date: dateStr,
-            cal: calName
+            cal: calEmail
         });
     }
 
