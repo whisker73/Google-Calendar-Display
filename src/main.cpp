@@ -23,7 +23,6 @@
 #include "epd_driver.h"
 #include "esp_adc_cal.h"
 #include "firasans.h"
-#include "logo.h"
 #include <Arduino.h>
 #include <FS.h>
 #include <SD.h>
@@ -141,20 +140,9 @@ void setup() {
 
   epd_init();
 
-  Rect_t area = {
-      .x = (EPD_WIDTH - (int32_t)logo_width) / 2,
-      .y = 5,
-      .width = logo_width,
-      .height = logo_height,
-  };
-
   epd_poweron();
   epd_clear();
-  epd_draw_grayscale_image(area, (uint8_t *)logo_data);
-  epd_draw_image(area, (uint8_t *)logo_data, BLACK_ON_WHITE);
-
-  int cursor_x = 200;
-  int cursor_y = 200;
+  epd_poweroff();
 
 #if defined(CONFIG_IDF_TARGET_ESP32S3)
   // Assuming that the previous touch was in sleep state, wake it up
@@ -201,9 +189,6 @@ void setup() {
 
 #endif
 
-  FontProperties props = {
-      .fg_color = 15, .bg_color = 0, .fallback_glyph = 0, .flags = 0};
-
   epd_poweroff();
 }
 
@@ -215,21 +200,33 @@ void loop() {
   float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
   if (battery_voltage >= 4.2) battery_voltage = 4.2;
 
-  // Clear the dynamic region below the logo
-  Rect_t dynamic_area = {
-      .x = 0, .y = 193, .width = EPD_WIDTH, .height = EPD_HEIGHT - 193};
-  epd_clear_area(dynamic_area);
+  // Full framebuffer reset to white
+  memset(framebuffer, 0xFF, EPD_WIDTH * EPD_HEIGHT / 2);
 
-  // Reset framebuffer slice to white, then draw everything into it
-  memset(framebuffer + 193 * (EPD_WIDTH / 2), 0xFF,
-         (EPD_HEIGHT - 193) * (EPD_WIDTH / 2));
+  // === Header: envelope icon + title ===
+  // Envelope at (30, 12), 80×55 px — double-thickness border and fold lines
+  epd_draw_rect(30, 12, 80, 55, 0, framebuffer);
+  epd_draw_rect(31, 13, 78, 53, 0, framebuffer);
+  // V-fold from top corners to center
+  epd_draw_line(30, 12, 70, 34, 0, framebuffer);
+  epd_draw_line(31, 13, 70, 34, 0, framebuffer);
+  epd_draw_line(110, 12, 70, 34, 0, framebuffer);
+  epd_draw_line(109, 13, 70, 34, 0, framebuffer);
 
-  // Separator line
-  epd_draw_hline(30, 193, EPD_WIDTH - 60, 0, framebuffer);
+  // Title "Holgers Kalender"
+  FontProperties title_props = {
+      .fg_color = 0, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
+  int cx = 125, cy = 58;
+  write_mode((GFXfont *)&FiraSans, "Holgers Kalender", &cx, &cy, framebuffer,
+             BLACK_ON_WHITE, &title_props);
 
-  // --- Calendar events ---
+  // Separator line (2 px)
+  epd_draw_hline(30, 78, EPD_WIDTH - 60, 0, framebuffer);
+  epd_draw_hline(30, 79, EPD_WIDTH - 60, 0, framebuffer);
+
+  // === Calendar events ===
+  // Available area y=88..450 → 362px / 5 events = 72px spacing
   calendar_data_t cal_data;
-  int cx, cy;
   if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0 &&
       cal_data.count > 0) {
     FontProperties gray_props = {
@@ -237,7 +234,7 @@ void loop() {
     FontProperties black_props = {
         .fg_color = 0, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
     for (int i = 0; i < cal_data.count; i++) {
-      int line_y = 248 + i * 50;
+      int line_y = 141 + i * 72;
       char dt_buf[48];
       snprintf(dt_buf, sizeof(dt_buf), "%s  %s", cal_data.events[i].date,
                cal_data.events[i].time);
@@ -245,7 +242,6 @@ void loop() {
       cy = line_y;
       write_mode((GFXfont *)&FiraSans, dt_buf, &cx, &cy, framebuffer,
                  BLACK_ON_WHITE, &gray_props);
-      // cx is now just past the date/time text — title follows with a gap
       cx += 25;
       cy = line_y;
       write_mode((GFXfont *)&FiraSans, cal_data.events[i].title, &cx, &cy,
@@ -256,14 +252,14 @@ void loop() {
     FontProperties gray_props = {
         .fg_color = 8, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
     cx = 50;
-    cy = 280;
+    cy = 160;
     write_mode((GFXfont *)&FiraSans, "Keine Termine abrufbar", &cx, &cy,
                framebuffer, BLACK_ON_WHITE, &gray_props);
     Serial.println("Calendar fetch failed.");
   }
 
-  // --- Dark status bar ---
-  epd_fill_rect(0, 463, EPD_WIDTH, EPD_HEIGHT - 463, 30, framebuffer);
+  // === Dark status bar ===
+  epd_fill_rect(0, 455, EPD_WIDTH, EPD_HEIGHT - 455, 30, framebuffer);
 
   // Time (white on dark)
   struct tm timeinfo;
@@ -272,7 +268,7 @@ void loop() {
   FontProperties white_props = {
       .fg_color = 15, .bg_color = 0, .fallback_glyph = 0, .flags = 0};
   cx = 50;
-  cy = 515;
+  cy = 511;
   write_mode((GFXfont *)&FiraSans, buf, &cx, &cy, framebuffer, WHITE_ON_BLACK,
              &white_props);
 
@@ -280,12 +276,13 @@ void loop() {
   char volt_buf[20];
   snprintf(volt_buf, sizeof(volt_buf), "%.2f V", battery_voltage);
   cx = EPD_WIDTH - 190;
-  cy = 515;
+  cy = 511;
   write_mode((GFXfont *)&FiraSans, volt_buf, &cx, &cy, framebuffer,
              WHITE_ON_BLACK, &white_props);
 
-  // Push framebuffer to display — logo area (y=0..192) stays untouched
-  epd_draw_grayscale_image(dynamic_area, framebuffer + 193 * (EPD_WIDTH / 2));
+  // Push full framebuffer to display
+  Rect_t full_area = {.x = 0, .y = 0, .width = EPD_WIDTH, .height = EPD_HEIGHT};
+  epd_draw_grayscale_image(full_area, framebuffer);
 
   // === Power off and deep sleep ===
   epd_poweroff_all();
