@@ -3,7 +3,7 @@
 
 #define CALENDAR_URL_PLACEHOLDER                                               \
   "https://script.google.com/macros/s/"                                        \
-  "AKfycbx7DtUlkL3k8_9netohaRBES9gMAVGSppqiRAF2ZaO0hdaeKYQUkZiZQ-f1cw_pbJqM"  \
+  "AKfycbywT3fR70gxHD-VxnvDcQzF4T37tMra3lSfCd6ju3ta23dZCR07v6nb9ZAwLphm2mX5"  \
   "exec"
 
 typedef struct {
