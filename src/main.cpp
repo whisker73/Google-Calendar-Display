@@ -142,8 +142,8 @@ void setup() {
   epd_init();
 
   Rect_t area = {
-      .x = 20,
-      .y = 0,
+      .x = (EPD_WIDTH - (int32_t)logo_width) / 2,
+      .y = 5,
       .width = logo_width,
       .height = logo_height,
   };
@@ -208,96 +208,94 @@ void setup() {
 }
 
 void loop() {
-  // When reading the battery voltage, POWER_EN must be turned on
   epd_poweron();
-  delay(10); // Make adc measurement more accurate
+  delay(10);
+
   uint16_t v = analogRead(BATT_PIN);
   float battery_voltage = ((float)v / 4095.0) * 2.0 * 3.3 * (vref / 1000.0);
-  if (battery_voltage >= 4.2) {
-    battery_voltage = 4.2;
+  if (battery_voltage >= 4.2) battery_voltage = 4.2;
+
+  // Clear the dynamic region below the logo
+  Rect_t dynamic_area = {
+      .x = 0, .y = 193, .width = EPD_WIDTH, .height = EPD_HEIGHT - 193};
+  epd_clear_area(dynamic_area);
+
+  // Reset framebuffer slice to white, then draw everything into it
+  memset(framebuffer + 193 * (EPD_WIDTH / 2), 0xFF,
+         (EPD_HEIGHT - 193) * (EPD_WIDTH / 2));
+
+  // Separator line
+  epd_draw_hline(30, 193, EPD_WIDTH - 60, 0, framebuffer);
+
+  // --- Calendar events ---
+  calendar_data_t cal_data;
+  int cx, cy;
+  if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0 &&
+      cal_data.count > 0) {
+    FontProperties gray_props = {
+        .fg_color = 7, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
+    FontProperties black_props = {
+        .fg_color = 0, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
+    for (int i = 0; i < cal_data.count; i++) {
+      int line_y = 248 + i * 50;
+      char dt_buf[48];
+      snprintf(dt_buf, sizeof(dt_buf), "%s  %s", cal_data.events[i].date,
+               cal_data.events[i].time);
+      cx = 50;
+      cy = line_y;
+      write_mode((GFXfont *)&FiraSans, dt_buf, &cx, &cy, framebuffer,
+                 BLACK_ON_WHITE, &gray_props);
+      // cx is now just past the date/time text — title follows with a gap
+      cx += 25;
+      cy = line_y;
+      write_mode((GFXfont *)&FiraSans, cal_data.events[i].title, &cx, &cy,
+                 framebuffer, BLACK_ON_WHITE, &black_props);
+    }
+    Serial.printf("Calendar: %d events\n", cal_data.count);
+  } else {
+    FontProperties gray_props = {
+        .fg_color = 8, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
+    cx = 50;
+    cy = 280;
+    write_mode((GFXfont *)&FiraSans, "Keine Termine abrufbar", &cx, &cy,
+               framebuffer, BLACK_ON_WHITE, &gray_props);
+    Serial.println("Calendar fetch failed.");
   }
-  String voltage = "➸ Voltage: " + String(battery_voltage) + "V";
 
-  // Set up a unified bottom strip for Status (Time and Voltage)
-  Rect_t status_area = {
-      .x = 0,
-      .y = EPD_HEIGHT - 60,
-      .width = EPD_WIDTH,
-      .height = 60,
-  };
-  epd_clear_area(status_area);
+  // --- Dark status bar ---
+  epd_fill_rect(0, 463, EPD_WIDTH, EPD_HEIGHT - 463, 30, framebuffer);
 
-  // Left side: Date and Time
-  int cursor_x = 50;
-  int cursor_y = EPD_HEIGHT - 20;
-
+  // Time (white on dark)
   struct tm timeinfo;
   rtc.getDateTime(&timeinfo);
-  strftime(buf, 64, "%b %d %Y %H:%M:%S", &timeinfo);
-  writeln((GFXfont *)&FiraSans, buf, &cursor_x, &cursor_y, NULL);
+  strftime(buf, sizeof(buf), "%d.%m.%Y    %H:%M:%S", &timeinfo);
+  FontProperties white_props = {
+      .fg_color = 15, .bg_color = 0, .fallback_glyph = 0, .flags = 0};
+  cx = 50;
+  cy = 515;
+  write_mode((GFXfont *)&FiraSans, buf, &cx, &cy, framebuffer, WHITE_ON_BLACK,
+             &white_props);
 
-  // Right side: Voltage
-  cursor_x = EPD_WIDTH - 330;
-  cursor_y = EPD_HEIGHT - 20;
-  writeln((GFXfont *)&FiraSans, (char *)voltage.c_str(), &cursor_x, &cursor_y,
-          NULL);
+  // Battery voltage (white on dark, right side)
+  char volt_buf[20];
+  snprintf(volt_buf, sizeof(volt_buf), "%.2f V", battery_voltage);
+  cx = EPD_WIDTH - 190;
+  cy = 515;
+  write_mode((GFXfont *)&FiraSans, volt_buf, &cx, &cy, framebuffer,
+             WHITE_ON_BLACK, &white_props);
 
-  // Fetch Calendar
-  calendar_data_t cal_data;
-  if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0) {
-    Serial.printf("➸ Calendar fetched successfully: %d events\n",
-                  cal_data.count);
+  // Push framebuffer to display — logo area (y=0..192) stays untouched
+  epd_draw_grayscale_image(dynamic_area, framebuffer + 193 * (EPD_WIDTH / 2));
 
-    // Clear Calendar Area
-    Rect_t cal_area = {
-        .x = 50,
-        .y = 220,
-        .width = EPD_WIDTH - 100,
-        .height = EPD_HEIGHT - 220 - 60,
-    };
-    epd_clear_area(cal_area);
-
-    int cal_x = 50;
-    int cal_y = 260;
-
-    for (int i = 0; i < cal_data.count; i++) {
-      Serial.printf("   Event %d: %s | %s %s\n", i, cal_data.events[i].title,
-                    cal_data.events[i].date, cal_data.events[i].time);
-
-      String event_string = String(cal_data.events[i].date) + " " +
-                            String(cal_data.events[i].time) + "  |  " +
-                            String(cal_data.events[i].title);
-      writeln((GFXfont *)&FiraSans, (char *)event_string.c_str(), &cal_x,
-              &cal_y, NULL);
-      // Move to next line for the next event
-      cal_x = 50;
-      cal_y += 60;
-    }
-  } else {
-    Serial.println("➸ Failed to fetch calendar data!");
-  }
-
-  // Finished updating display, turn off EPD and prepare for deep sleep
+  // === Power off and deep sleep ===
   epd_poweroff_all();
-
   Serial.println("Display updated. Entering deep sleep for 1 hour...");
-
   WiFi.disconnect(true);
-
-  if (touchOnline) {
-    touch.sleep();
-  }
-
+  if (touchOnline) touch.sleep();
   delay(100);
-
   Wire.end();
   Serial.end();
-
-  // Configure timer wakeup for 1 hour (3600 seconds)
   esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL);
-
-  // Configure BOOT(STR_IO0) Button wakeup
   esp_sleep_enable_ext1_wakeup(_BV(0), ESP_EXT1_WAKEUP_ANY_LOW);
-
   esp_deep_sleep_start();
 }
