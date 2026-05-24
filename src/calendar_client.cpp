@@ -52,6 +52,7 @@ int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
             const char *title = item["title"] | "No Title";
             const char *t_time = item["time"] | "--:--";
             const char *date = item["date"] | "";
+            const char *cal = item["cal"] | "";
 
             strlcpy(out_data->events[out_data->count].title, title,
                     sizeof(out_data->events[out_data->count].title));
@@ -59,6 +60,8 @@ int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
                     sizeof(out_data->events[out_data->count].time));
             strlcpy(out_data->events[out_data->count].date, date,
                     sizeof(out_data->events[out_data->count].date));
+            strlcpy(out_data->events[out_data->count].calendar, cal,
+                    sizeof(out_data->events[out_data->count].calendar));
 
             out_data->count++;
           }
@@ -68,6 +71,7 @@ int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
           const char *title = item["title"] | "No Events";
           const char *t_time = item["time"] | "--:--";
           const char *date = item["date"] | "";
+          const char *cal = item["cal"] | "";
 
           strlcpy(out_data->events[0].title, title,
                   sizeof(out_data->events[0].title));
@@ -75,6 +79,8 @@ int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
                   sizeof(out_data->events[0].time));
           strlcpy(out_data->events[0].date, date,
                   sizeof(out_data->events[0].date));
+          strlcpy(out_data->events[0].calendar, cal,
+                  sizeof(out_data->events[0].calendar));
           out_data->count = 1;
         }
 

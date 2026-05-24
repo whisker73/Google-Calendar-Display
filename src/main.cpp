@@ -58,6 +58,29 @@ uint32_t calendar_interval = 0;
 int vref = 1100;
 char buf[128];
 
+// Calendar name → shape index (auto-assigned per boot cycle, max 4 calendars)
+char g_cal_names[4][32] = {{0}};
+int g_cal_count = 0;
+
+int get_cal_shape(const char *name) {
+  for (int i = 0; i < g_cal_count; i++) {
+    if (strncmp(g_cal_names[i], name, 31) == 0) return i;
+  }
+  if (g_cal_count < 4) {
+    strlcpy(g_cal_names[g_cal_count], name, 32);
+    return g_cal_count++;
+  }
+  return 0;
+}
+
+void draw_cal_symbol(int x, int y, int shape, uint8_t *fb) {
+  switch (shape % 3) {
+  case 0: epd_fill_circle(x, y, 10, 0, fb); break;
+  case 1: epd_fill_rect(x - 10, y - 10, 20, 20, 0, fb); break;
+  case 2: epd_fill_triangle(x, y - 11, x - 10, y + 9, x + 10, y + 9, 0, fb); break;
+  }
+}
+
 struct _point {
   uint8_t buttonID;
   int32_t x;
@@ -235,13 +258,18 @@ void loop() {
         .fg_color = 0, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
     for (int i = 0; i < cal_data.count; i++) {
       int line_y = 141 + i * 72;
+      // Calendar symbol (shape assigned by calendar name)
+      int shape = get_cal_shape(cal_data.events[i].calendar);
+      draw_cal_symbol(65, line_y - 14, shape, framebuffer);
+      // Date + time in gray
       char dt_buf[48];
       snprintf(dt_buf, sizeof(dt_buf), "%s  %s", cal_data.events[i].date,
                cal_data.events[i].time);
-      cx = 50;
+      cx = 90;
       cy = line_y;
       write_mode((GFXfont *)&FiraSans, dt_buf, &cx, &cy, framebuffer,
                  BLACK_ON_WHITE, &gray_props);
+      // Title in black
       cx += 25;
       cy = line_y;
       write_mode((GFXfont *)&FiraSans, cal_data.events[i].title, &cx, &cy,

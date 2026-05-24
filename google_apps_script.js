@@ -41,7 +41,8 @@ function doGet(e) {
         result.push({
             title: evt.getTitle(),
             time: timeStr,
-            date: dateStr
+            date: dateStr,
+            cal: evt.getCalendar().getName()
         });
     }
 

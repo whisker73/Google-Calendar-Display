@@ -3,13 +3,14 @@
 
 #define CALENDAR_URL_PLACEHOLDER                                               \
   "https://script.google.com/macros/s/"                                        \
-  "AKfycbzJNm_C5rlaq1K9xiUE7IvjK8j72zKnEIM3m3EcpqZuh4JlvjgUusx52qX4OeFzXzOL/"  \
+  "AKfycbx7DtUlkL3k8_9netohaRBES9gMAVGSppqiRAF2ZaO0hdaeKYQUkZiZQ-f1cw_pbJqM"  \
   "exec"
 
 typedef struct {
   char title[64];
   char time[32];
   char date[16];
+  char calendar[32];
 } calendar_event_t;
 
 typedef struct {
