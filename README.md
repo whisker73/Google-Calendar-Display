@@ -1,55 +1,86 @@
-# LilyGO EPD47 ESP32-S3 E-Paper Display
+# Google Calendar Display
 
-Dieses Projekt steuert das LilyGO T5 4.7 Zoll E-Paper Display basierend auf dem ESP32-S3 Mikrocontroller. Es vereint eine statische Logodarstellung, eine Zeitanzeige (gesynct per NTP) mit Batteriespannung in einer unteren Statusleiste und eine dynamische, zentrierte Auflistung von Google-Kalender-Terminen.
+Ein Google-Kalender-Dashboard auf dem **LilyGO T5 4.7" E-Paper** (ESP32-S3). Das Display zeigt die nächsten fünf Termine aus allen Google-Kalendern — inklusive freigegebener Kalender — mit Geschlechts-Symbol je Kalender-Besitzer, Datum, Uhrzeit und Titel. Danach legt sich der ESP32 für eine Stunde schlafen.
 
 ## Funktionen
 
-1. **E-Paper Rendering**: Native Ansteuerung des Displays über die LilyGO Board-Abstraktion.
-2. **NTP Zeitsynchronisierung**: Die aktuelle Uhrzeit wird via WiFi (`pool.ntp.org`) geholt und über die intern eingebundene Echtzeituhr (RTC PCF8563) puffert.
-3. **Google Kalender Integration**:
-   - Ein dedizierter Client in `src/calendar_client.cpp` holt über WLAN Termine ab.
-   - Das Abrufen geschieht über ein Google Apps Script (JSON Web-API), dekodiert über `ArduinoJson`.
-4. **Angepasste Benutzeroberfläche (UI)**:
-   - **Oben links**: Das eigene Logo (konvertiert als Hex-Bitmap aus `logo.h`).
-   - **Mitte**: Bis zu 5 zukünftige Termine (Datum, Uhrzeit und Titel).
-   - **Unten**: Statusleiste mit Live-Uhrzeit (links) und der aktuellen Batteriespannung (rechts).
-5. **Stromsparmodus (Deep Sleep)**:
-   - Der ESP32 läuft nicht mehr durchgehend in einer Schleife.
-   - Nach dem Start holt er alle Aktualisierungen, zeichnet den Bildschirm neu und legt sich dann sofort für **1 Stunde** komplett schlafen (`esp_deep_sleep_start()`), um den LiPo-Akku bestmöglich zu schonen.
-   - Ein manuelles Aufwecken (Force Update) ist durch Drücken des seitlichen **BOOT-Buttons** möglich.
+- **Mehrere Kalender**: Alle eigenen und freigegebenen Google-Kalender werden zusammengeführt und chronologisch sortiert
+- **Kalender-Symbole**: Festes ♂-Symbol für den Hauptkalender, ♀-Symbol für freigegebene Kalender (konfigurierbar per E-Mail-Adresse)
+- **Header**: Gezeichnetes Briefumschlag-Icon + Titel
+- **Statusleiste**: Datum/Uhrzeit (NTP + RTC PCF8563) und Batteriespannung
+- **Deep Sleep**: Nach jedem Refresh schläft der ESP32 1 Stunde; BOOT-Button weckt manuell auf
+- **Credentials ausgelagert**: WLAN-Daten und Script-URL liegen in `src/secrets.h` (gitignored)
 
-## Hardware Voraussetzungen
+## Hardware
 
-- **LilyGO T5 4.7-inch E-paper (V2.3 / ESP32-S3)**
-- LiPo-Akku (falls das Gerät mobil betrieben werden soll)
+- LilyGO T5 4.7" E-Paper V2.3 (ESP32-S3)
+- LiPo-Akku (optional, für mobilen Betrieb)
 
-## Softwareanforderungen / Bibliotheken
+## Einrichtung
 
-Das Projekt ist für **PlatformIO** (unter VS Code oder über CLI) konfiguriert.
-Die wesentlichen Abhängigkeiten (automatisch per `platformio.ini` aufgelöst) sind:
-
-- `LilyGo-EPD47` (Inklusive e-Paper-Treiber, Board-Definitionen und GT911-Touch)
-- `bblanchon/ArduinoJson` für die Termin-Extraktion
-- `WiFi` und `HTTPClient` für die Cloud-Anbindung
-
-## Kompilierung und Upload
+### 1. Secrets anlegen
 
 ```bash
-# 1. PlatformIO Umgebung laden oder über die VSCode IDE starten
-pio run
-
-# 2. Firmware auf das Board flashen
-pio run --target upload
-
-# 3. Serial Monitor öffnen (Baudrate: 115200) um den Calendar-Fetch Log zu betrachten
-pio device monitor
+cp src/secrets.h.example src/secrets.h
 ```
+
+`src/secrets.h` befüllen:
+
+```cpp
+#define WIFI_SSID     "dein-wlan-name"
+#define WIFI_PASSWORD "dein-wlan-passwort"
+
+#define CALENDAR_URL \
+  "https://script.google.com/macros/s/DEINE_SCRIPT_ID/exec"
+```
+
+### 2. Google Apps Script deployen
+
+1. [script.google.com](https://script.google.com) öffnen → Neues Projekt
+2. Inhalt von `google_apps_script.js` einfügen
+3. **Deployen → Neue Bereitstellung → Web-App**
+   - Ausführen als: „Ich"
+   - Zugriff: „Jeder"
+4. Die Bereitstellungs-URL in `src/secrets.h` als `CALENDAR_URL` eintragen
+
+> Die Script-URL ändert sich bei jeder neuen Bereitstellung — danach `secrets.h` aktualisieren und neu flashen.
+
+### 3. Kompilieren und flashen
+
+```bash
+pio run                    # kompilieren
+pio run --target upload    # flashen (Board per USB verbinden)
+pio device monitor         # serieller Monitor, 115200 Baud
+```
+
+> Falls das Board im Deep Sleep ist: USB abziehen und wieder einstecken, oder BOOT-Button gedrückt halten beim Anschließen.
 
 ## Projektstruktur
 
-- `/src/main.cpp`: Das Kernprogramm (WiFi, EPD Rendering, Touch-Abfrage, Timer-Schleifen).
+```
+src/
+├── main.cpp              # Haupt-Logik: WiFi, EPD-Rendering, Deep Sleep
+├── calendar_client.cpp   # HTTP-Fetch + ArduinoJson-Parsing
+├── calendar_client.h     # Datenstrukturen (calendar_event_t, calendar_data_t)
+├── secrets.h             # Credentials — nicht eingecheckt (gitignored)
+└── secrets.h.example     # Vorlage für secrets.h
+google_apps_script.js     # Google Apps Script (Calendar-API → JSON)
+platformio.ini            # PlatformIO Board-Konfiguration und Abhängigkeiten
+boards/                   # Custom Board-Definition für LilyGO EPD S3
+```
 
-- `/src/calendar_client.*`: Kapselung von HTTPClient und JSON-Parsing, adaptiert aus einem früheren ESP-IDF Projekt.
-- `/src/logo.h`: C-Array des im oberen Bereich dargestellten Logos.
-- `/boards/`: PlatformIO Custom-Board Konfigurationen für den speziellen E-Paper S3-Chip von LilyGO.
-- `platformio.ini`: System-Umgebung, Build-Flags (e.g. `BOARD_HAS_PSRAM`) und Abhängigkeiten.
+## Abhängigkeiten
+
+Werden automatisch über `platformio.ini` aufgelöst:
+
+- `LilyGo-EPD47` — E-Paper-Treiber, Board-Abstraktionen, GT911-Touch
+- `bblanchon/ArduinoJson` — JSON-Parsing
+- `WiFi`, `HTTPClient` — WLAN und HTTP
+
+## Anpassen
+
+**Kalender-Symbol-Zuordnung**: In `src/main.cpp` die Erkennung in `loop()` anpassen — aktuell wird per `strstr(email, "anja")` zwischen ♂ und ♀ entschieden.
+
+**Anzahl Termine**: In `google_apps_script.js` den `limit`-Wert ändern (aktuell 5), sowie `events[5]` in `calendar_client.h`.
+
+**Refresh-Intervall**: In `src/main.cpp` den Wert in `esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL)` anpassen (Angabe in Mikrosekunden).
