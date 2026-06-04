@@ -1,11 +1,6 @@
 #pragma once
 #include <Arduino.h>
 
-#define CALENDAR_URL_PLACEHOLDER                                               \
-  "https://script.google.com/macros/s/"                                        \
-  "AKfycbx0IffkpO2U8eP6nuoVLJ1QGb3b1R__BeWofTXR6agUyBYEMzfHGZahmUKF5Jv2rD1H/"  \
-  "exec"
-
 typedef struct {
   char title[64];
   char time[32];

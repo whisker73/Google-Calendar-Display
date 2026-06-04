@@ -29,6 +29,7 @@
 #include <SPI.h>
 
 #include "calendar_client.h"
+#include "secrets.h"
 #include "utilities.h"
 #include <SensorPCF8563.hpp>
 #include <TouchDrvGT911.hpp>
@@ -36,8 +37,6 @@
 #include <Wire.h>
 #include <esp_sntp.h>
 
-#define WIFI_SSID "TP-Link_IoT_2G"
-#define WIFI_PASSWORD "Holger&star1103"
 #define PCF8563_SLAVE_ADDRESS 0x51
 
 const char *ntpServer1 = "pool.ntp.org";
@@ -242,7 +241,7 @@ void loop() {
   // === Calendar events ===
   // Available area y=88..450 → 362px / 5 events = 72px spacing
   calendar_data_t cal_data;
-  if (calendar_client_fetch(CALENDAR_URL_PLACEHOLDER, &cal_data) == 0 &&
+  if (calendar_client_fetch(CALENDAR_URL, &cal_data) == 0 &&
       cal_data.count > 0) {
     FontProperties gray_props = {
         .fg_color = 7, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
