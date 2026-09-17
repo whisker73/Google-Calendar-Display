@@ -7,13 +7,16 @@ void calendar_client_init(void) {
   // Nothing required for now
 }
 
-int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
-  if (!out_data)
-    return -1;
+// Anzahl der Abrufversuche und Pause dazwischen
+static const int FETCH_MAX_ATTEMPTS = 3;
+static const uint32_t FETCH_RETRY_DELAY_MS = 2000;
+// Apps Script braucht zwei TLS-Handshakes (Redirect) plus Script-Laufzeit
+static const uint16_t FETCH_TIMEOUT_MS = 20000;
 
+// Einzelner Abrufversuch ohne Retry. Liefert 0 bei Erfolg.
+static int fetch_once(const char *url, calendar_data_t *out_data) {
   HTTPClient http;
-  // Set timeout to 10 seconds (10000 ms) and allow following redirects
-  http.setTimeout(10000);
+  http.setTimeout(FETCH_TIMEOUT_MS);
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
 
   Serial.print("[Calendar] Fetching: ");
@@ -96,5 +99,22 @@ int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
     Serial.println("[Calendar] Unable to connect");
   }
 
+  return -1;
+}
+
+int calendar_client_fetch(const char *url, calendar_data_t *out_data) {
+  if (!out_data)
+    return -1;
+
+  // Bis zu FETCH_MAX_ATTEMPTS Versuche, damit ein einzelner Aussetzer
+  // nicht eine Stunde lang "Keine Termine abrufbar" anzeigt
+  for (int attempt = 1; attempt <= FETCH_MAX_ATTEMPTS; attempt++) {
+    Serial.printf("[Calendar] Attempt %d/%d\n", attempt, FETCH_MAX_ATTEMPTS);
+    if (fetch_once(url, out_data) == 0)
+      return 0;
+    if (attempt < FETCH_MAX_ATTEMPTS)
+      delay(FETCH_RETRY_DELAY_MS);
+  }
+  Serial.println("[Calendar] All attempts failed");
   return -1;
 }

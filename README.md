@@ -1,6 +1,6 @@
 # Google Calendar Display
 
-Ein Google-Kalender-Dashboard auf dem **LilyGO T5 4.7" E-Paper** (ESP32-S3). Das Display zeigt die nächsten fünf Termine aus allen Google-Kalendern — inklusive freigegebener Kalender — mit Geschlechts-Symbol je Kalender-Besitzer, Datum, Uhrzeit und Titel. Danach legt sich der ESP32 für eine Stunde schlafen.
+Ein Google-Kalender-Dashboard auf dem **LilyGO T5 4.7" E-Paper** (ESP32-S3). Das Display zeigt die nächsten fünf Termine aus allen Google-Kalendern — inklusive freigegebener Kalender — mit Geschlechts-Symbol je Kalender-Besitzer, Datum, Uhrzeit und Titel. Danach legt sich der ESP32 für drei Stunden schlafen.
 
 ## Funktionen
 
@@ -8,7 +8,7 @@ Ein Google-Kalender-Dashboard auf dem **LilyGO T5 4.7" E-Paper** (ESP32-S3). Das
 - **Kalender-Symbole**: Festes ♂-Symbol für den Hauptkalender, ♀-Symbol für freigegebene Kalender (konfigurierbar per E-Mail-Adresse)
 - **Header**: Gezeichnetes Briefumschlag-Icon + Titel
 - **Statusleiste**: Datum/Uhrzeit (NTP + RTC PCF8563) und Batteriespannung
-- **Deep Sleep**: Nach jedem Refresh schläft der ESP32 1 Stunde; BOOT-Button weckt manuell auf
+- **Deep Sleep**: Nach jedem Refresh schläft der ESP32 3 Stunden; BOOT-Button weckt manuell auf
 - **Credentials ausgelagert**: WLAN-Daten und Script-URL liegen in `src/secrets.h` (gitignored)
 
 ## Hardware
@@ -83,4 +83,4 @@ Werden automatisch über `platformio.ini` aufgelöst:
 
 **Anzahl Termine**: In `google_apps_script.js` den `limit`-Wert ändern (aktuell 5), sowie `events[5]` in `calendar_client.h`.
 
-**Refresh-Intervall**: In `src/main.cpp` den Wert in `esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL)` anpassen (Angabe in Mikrosekunden).
+**Refresh-Intervall**: In `src/main.cpp` den Wert in `esp_sleep_enable_timer_wakeup(3ULL * 3600ULL * 1000000ULL)` anpassen (Angabe in Mikrosekunden).

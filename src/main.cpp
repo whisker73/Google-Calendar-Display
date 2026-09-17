@@ -83,6 +83,19 @@ struct _point {
                   {2, 10, EPD_HEIGHT - 80, 80, 80},
                   {3, EPD_WIDTH - 80, EPD_HEIGHT - 80, 80, 80}};
 
+// Wartet bis zu timeout_ms auf eine WLAN-Verbindung. true = verbunden.
+static bool wait_for_wifi(uint32_t timeout_ms) {
+  uint32_t start = millis();
+  while (WiFi.status() != WL_CONNECTED) {
+    if (millis() - start >= timeout_ms) {
+      Serial.println("[WiFi] Timeout, not connected");
+      return false;
+    }
+    delay(100);
+  }
+  return true;
+}
+
 void WiFiGotIP(WiFiEvent_t event, WiFiEventInfo_t info) {
   Serial.println("WiFi connected");
   Serial.println("IP address: ");
@@ -241,8 +254,12 @@ void loop() {
   // === Calendar events ===
   // Available area y=88..450 → 362px / 5 events = 72px spacing
   calendar_data_t cal_data;
-  if (calendar_client_fetch(CALENDAR_URL, &cal_data) == 0 &&
-      cal_data.count > 0) {
+  cal_data.count = 0;
+  // Erst auf WLAN warten, sonst läuft der Abruf ins Leere
+  bool wifi_ok = wait_for_wifi(15000);
+  bool fetch_ok =
+      wifi_ok && calendar_client_fetch(CALENDAR_URL, &cal_data) == 0;
+  if (fetch_ok && cal_data.count > 0) {
     FontProperties gray_props = {
         .fg_color = 7, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
     FontProperties black_props = {
@@ -272,7 +289,8 @@ void loop() {
         .fg_color = 8, .bg_color = 15, .fallback_glyph = 0, .flags = 0};
     cx = 50;
     cy = 160;
-    write_mode((GFXfont *)&FiraSans, "Keine Termine abrufbar", &cx, &cy,
+    const char *msg = wifi_ok ? "Keine Termine abrufbar" : "Kein WLAN";
+    write_mode((GFXfont *)&FiraSans, msg, &cx, &cy,
                framebuffer, BLACK_ON_WHITE, &gray_props);
     Serial.println("Calendar fetch failed.");
   }
@@ -305,13 +323,14 @@ void loop() {
 
   // === Power off and deep sleep ===
   epd_poweroff_all();
-  Serial.println("Display updated. Entering deep sleep for 1 hour...");
+  Serial.println("Display updated. Entering deep sleep for 3 hours...");
   WiFi.disconnect(true);
   if (touchOnline) touch.sleep();
   delay(100);
   Wire.end();
   Serial.end();
-  esp_sleep_enable_timer_wakeup(3600ULL * 1000000ULL);
+  // 3 Stunden Deep Sleep
+  esp_sleep_enable_timer_wakeup(3ULL * 3600ULL * 1000000ULL);
   esp_sleep_enable_ext1_wakeup(_BV(0), ESP_EXT1_WAKEUP_ANY_LOW);
   esp_deep_sleep_start();
 }
